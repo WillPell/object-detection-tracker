@@ -172,7 +172,7 @@ def loadDetector():
 def detectTarget(model, frame):
     prediction = model.predict(frame, classes=[TARGET_ID], conf=SCORE_THRESHOLD, verbose=False)[0]
 
-    # from gpu -> cpu, then np list for json
+    # from gpu -> cpu, then np list
     detections = [
         (box.tolist(), TARGET_CLASS, float(score))
         for box, score in zip(prediction.boxes.xyxy.cpu().numpy(), prediction.boxes.conf.cpu().numpy())
