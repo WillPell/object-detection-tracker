@@ -2,12 +2,12 @@
 __pycache__/
 *.pyc
 
-# Model weights are auto-downloaded on first run - never commit or ZIP these
+
 *.pt
 *.onnx
 *.weights
 
-# Generated outputs
+
 output/*.mp4
 output/frames/*.jpg
 output/frames/*.png
@@ -15,11 +15,11 @@ output/*.csv
 !output/.gitkeep
 !output/frames/.gitkeep
 
-# Assignment brief (Griffith IP) and generated report
+# ASSIGNMENT BRIEF AND MY REPORT
 *.pdf
 *.docx
 
-# Input video - goes in the submission ZIP, too big for GitHub
+# input vid
 data/*.mp4
 data/*.mov
 data/*.MOV

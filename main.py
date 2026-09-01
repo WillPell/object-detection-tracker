@@ -1,13 +1,12 @@
-#  3006ICT Robotics and Computer Vision
-#  Mid-Trimester Individual Project - Detection Assisted Visual Tracking
-#
-#  This is the main entry point, run it with:   python main.py
+# my main file for this project, runs the pipeline and saves the results
 
+# libs
 import sys
-
 import cv2 as cv
 import numpy as np
 
+
+# functions from utils
 from utils import (
     BASE_DIR, VIDEO_PATH, RESULTS_DIR, FRAMES_DIR,
     TARGET_CLASS, SCORE_THRESHOLD, MIN_TRACKS, COOLDOWN, PROC_WIDTH, SAVE_FRAMES,
@@ -17,13 +16,12 @@ from utils import (
     drawThirds, drawOverlay, showFrames, plotValidTracks, saveMetrics, printSummary,
 )
 
+
+# GLOBALS
 OUTPUT_VIDEO = RESULTS_DIR / "annotated_output.mp4"
 SHOW_WINDOW = "--no-display" not in sys.argv
 
-# frames used for the part 1 figure. the first three show the target reaching
-# the left, centre and right thirds, then the two challenging conditions.
-# the scale frames were picked from the scale column of metrics.csv, both are
-# in the same tracking run so their sizes can be compared directly
+# condition frames [AI ASSISTED]
 CONDITION_FRAMES = {
     0: "normal, detected at the start, centre third",
     300: "normal tracking, right third",
@@ -37,32 +35,33 @@ CONDITION_FRAMES = {
 
 
 def main():
+    # setup
     RESULTS_DIR.mkdir(exist_ok=True)
     FRAMES_DIR.mkdir(exist_ok=True)
 
     cap = openVideo(VIDEO_PATH)
     src_width, src_height, total, fps = videoInfo(cap)
 
-    # part 1, basic properties of the recorded video
-    print("=" * 60)
-    print("PART 1 - VIDEO PROPERTIES")
-    print("=" * 60)
+    # part 1 -- basic properties of the recorded video
+    print("\n")
+    print("PART 1 -- VIDEO PROPERTIES")
+    print("\n")
     print(f"file             : {VIDEO_PATH.relative_to(BASE_DIR)}")
     print(f"frame width      : {src_width}")
     print(f"frame height     : {src_height}")
     print(f"number of frames : {total}")
     print(f"fps              : {fps:.2f}")
     print(f"duration         : {total / fps:.1f} s")
-    print("=" * 60)
+    print("\n")
 
-    # everything below works at this smaller size, it keeps the tracking quick
-    # and stops the output mp4 becoming huge
+    # rescales video for processing (height needed to be scaled to for aspect ratio)
     resize_scale = PROC_WIDTH / src_width
     width, height = PROC_WIDTH, int(round(src_height * resize_scale))
 
     model = loadDetector()
     writer = cv.VideoWriter(str(OUTPUT_VIDEO), cv.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
 
+    # error check, like done in the labs
     if not writer.isOpened():
         cap.release()
         raise RuntimeError(f"Cannot open the video writer: {OUTPUT_VIDEO}")
@@ -70,13 +69,14 @@ def main():
     print(f"\ntarget class = {TARGET_CLASS}, confidence threshold = {SCORE_THRESHOLD}")
     print(f"processing at {width}x{height}\n")
 
-    # we always start by detecting, the target is never picked by hand
+    # we always start by detecting, target is never picked by hand
     state = REDETECTING
     reason = "startup"
     attempts = 0
     successes = 0
     cooldown = 0
 
+    # initalisation
     p0 = np.empty((0, 1, 2), dtype=np.float32)
     start_count = 0
     start_spread = 0.0
@@ -88,6 +88,7 @@ def main():
     condition_images, condition_order = [], []
     frame_idx = 0
 
+    # main loop
     while True:
         ok, source_frame = cap.read()
 
@@ -105,8 +106,7 @@ def main():
         if trails is None:
             trails = np.zeros_like(frame)
         else:
-            # let the old trail lines fade out, otherwise they smear right
-            # across the frame once the camera has panned a long way
+            # fade out
             trails = (trails * 0.96).astype(np.uint8)
 
         centre = None
@@ -115,7 +115,7 @@ def main():
         good_new, good_old = None, None
         redetected = False
 
-        # part 3, track the points we already have
+        # part 3 -- tracks our points across frames
         if state == TRACKING and old_gray is not None:
             good_new, good_old, displacement = trackPoints(old_gray, gray, p0, frame.shape)
 
@@ -128,15 +128,13 @@ def main():
                 p0 = good_new.reshape(-1, 1, 2)
                 scale = pointSpread(good_new) / start_spread if start_spread else 0.0
 
-                # part 4, decide whether we still trust the tracker
+                
                 reliable, reason = isReliable(len(good_new), start_count, displacement)
 
                 if not reliable:
                     state = REDETECTING
 
-        # part 4, run the detector again to get the target back. the frame we
-        # actually call the detector on is reported as RE-DETECTING, the result
-        # decides what state we are in from the next frame onwards
+        # part 4 -- occlusion handling
         frame_state = state
 
         if state != TRACKING:
@@ -168,7 +166,7 @@ def main():
                     state = LOST
                     cooldown = COOLDOWN
 
-        # part 5, turn the centre into a command for the robot
+        # part 5 -- robot stuff
         action = robotAction(frame_state, centre, width)
 
         # draw everything onto the frame
@@ -177,9 +175,7 @@ def main():
         if frame_state == TRACKING and good_new is not None:
             frame = drawTracks(frame, trails, good_new, good_old)
 
-        # on a successful detection show the box, class and score, and the
-        # feature points that were just initialised inside it. the label goes
-        # below the box because the box often runs up under the hud panel
+        # draw the last detected box and keypoints if we are in the re detecting state
         if redetected and last_box is not None:
             frame = drawBox(frame, last_box, f"{TARGET_CLASS} {last_score:.2f}",
                             colour=(255, 0, 255), label_below=True)
@@ -228,10 +224,9 @@ def main():
     writer.release()
     cv.destroyAllWindows()
 
-    # part 1 and part 6, the figures and numbers used in the report
+    #  figure gen
     if condition_images:
-        # the scale in each caption is read back out of the measured data so it
-        # can never disagree with what the pipeline actually produced
+        
         condition_titles = []
 
         for idx in condition_order:
