@@ -202,6 +202,7 @@ def main():
             f"{scale:.3f}" if scale else "",
             frame_state, action,
             f"{last_score:.3f}" if redetected else "",
+            reason,
         ])
 
         if frame_idx in SAVE_FRAMES:

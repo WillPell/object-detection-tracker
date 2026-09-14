@@ -33,7 +33,7 @@ MAX_JUMP = 90.0
 COOLDOWN = 5
 
 PROC_WIDTH = 1280
-SAVE_FRAMES = [0, 300, 775, 810, 900, 1200, 1500, 1814]
+SAVE_FRAMES = [0, 300, 775, 810, 846, 900, 1200, 1500, 1814]
 
 TRACKING = "TRACKING"
 REDETECTING = "RE-DETECTING"
@@ -394,7 +394,7 @@ def saveMetrics(rows, save_as="metrics.csv"):
     path = RESULTS_DIR / save_as
 
     with open(path, "w") as file:
-        file.write("frame,valid_tracks,centre_x,centre_y,median_dx,median_dy,scale,state,action,score\n")
+        file.write("frame,valid_tracks,centre_x,centre_y,median_dx,median_dy,scale,state,action,score,reason\n")
 
         for row in rows:
             file.write(",".join(str(value) for value in row) + "\n")
